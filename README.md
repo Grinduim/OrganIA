@@ -67,8 +67,9 @@ A FastAPI fornece automaticamente uma documentação interativa para a API utili
 
 Swagger UI: http://127.0.0.1:8000/docs – Uma interface interativa para testar os endpoints da API.
 
-**Importante** : O modelo utilizado atualmente é nlptown/bert-base-multilingual-uncased-sentiment, porem você pode alterar para um de sua preferencia e realizar as adaptações necessarias.
-Além disso, a string de conexão com o Postgre está hard coded, sendo usuario postgres e senha root, caso você queira alterar alguma informação sobre, você pode alterar em app/db.py
+**Importante** : O modelo utilizado atualmente é nlptown/bert-base-multilingual-uncased-sentiment,e com isso a primeira vez pode demorar um pouco, porem você pode alterar para um de sua preferencia e realizar as adaptações necessárias.
+
+Além disso, a string de conexão com o Postgres está hard coded, sendo usuário postgres e senha root, caso você queira alterar alguma informação sobre, você pode alterar em app/db.py
 
 
 ## Rodando os Testes

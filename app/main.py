@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.models import Review
 from app.schemas import ReviewCreate, ReviewResponse
 from app.db import SessionLocal
-from app.sentiment_analyze import analyze_sentiment_pt
+from app.sentiment_analyze import analyze_sentiment_pt, analyze_sentiment
 app = FastAPI()
 
 # Dependência de banco de dados
@@ -50,7 +50,7 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db)):
     Raises:
         SQLAlchemyError: Erros relacionados ao banco de dados podem ser levantados se a operação falhar.
     """
-    new_review = Review(name=review.name, date=review.date, review=review.review, sentiment=analyze_sentiment_pt(review.review)[0])
+    new_review = Review(name=review.name, date=review.date, review=review.review, sentiment=analyze_sentiment(review.review)[0])
     db.add(new_review)
     db.commit()
     db.refresh(new_review)
@@ -58,6 +58,46 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db)):
 
 @app.get("/reviews", response_model=list[ReviewResponse])
 def get_reviews(db: Session = Depends(get_db)):
+    """
+    Retorna todas as avaliações analisadas.
+
+    Este endpoint recupera todas as avaliações de clientes armazenadas no banco de dados e retorna uma lista com as avaliações e suas respectivas classificações de sentimento (positiva, negativa, neutra).
+
+    Returns:
+        List[ReviewResponse]: Uma lista de objetos `ReviewResponse` contendo as avaliações dos clientes e suas classificações de sentimento.
+    
+    Example:
+        Um exemplo de requisição bem-sucedida para esse endpoint via cURL:
+        
+        ```bash
+        curl -X 'GET' \
+        'http://127.0.0.1:8000/reviews' \
+        -H 'accept: application/json'
+        ```
+
+        Resposta esperada (exemplo):
+        ```json
+        [
+            {
+                "id": 1,
+                "name": "Ana Silva",
+                "date": "2024-08-07",
+                "review": "O atendimento foi rápido e eficiente...",
+                "sentiment": "neutra"
+            },
+            {
+                "id": 2,
+                "name": "Bruno Souza",
+                "date": "2024-09-21",
+                "review": "Estou extremamente satisfeito com o suporte!",
+                "sentiment": "positiva"
+            }
+        ]
+        ```
+
+    Raises:
+        HTTPException: Não há exceções esperadas diretamente desse endpoint, pois ele retorna uma lista vazia caso não haja dados no banco de dados.
+    """
     reviews = db.query(Review).all()
     return reviews
 

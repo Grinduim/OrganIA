@@ -1,7 +1,17 @@
+import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+# from app.db import get_db
+from app.create_db import reset_database
 
-client = TestClient(app)
+
+@pytest.fixture(scope="module")
+def client_fixture():
+    client = TestClient(app)
+    # Antes de cada teste, resetar o banco de dados para garantir um estado limpo
+    reset_database()
+    yield client
+
 
 # Mock review data for testing
 mock_reviews = [
@@ -113,19 +123,139 @@ mock_reviews = [
 ]
 
 
-# Test creating a review (POST /reviews)
-def test_create_review():
-    for review in mock_reviews:
-        response = client.post("/reviews", json=review)
-        print(review["name"])
-        assert response.status_code == 200
-        assert response.json()["name"] == review["name"]
-        # TODO : implement a validation about the review sentiment gotcha
-        # assert response.json()["sentiment"] == review["sentiment"]
-
-
-# Test getting all reviews (GET /reviews)
-def test_get_all_reviews():
-    response = client.get("/reviews")
+def test_reset_db(client_fixture):
+    response_reset = client_fixture.get("/reset")
+    assert response_reset.status_code == 200
+    assert response_reset.json() == "Sucess"
+    response = client_fixture.get("/reviews")
     assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    assert response.json()["total"] == 0
+
+
+def test_create_review(client_fixture):
+    for review in mock_reviews:
+        response = client_fixture.post("/reviews", json=review)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == review["name"]
+        assert data["date"] == review["date"]
+        assert data["review"] == review["review"]
+        # assert data["sentiment"] == review["sentiment"]
+
+
+def test_get_all_reviews(client_fixture):
+    response = client_fixture.get("/reviews")
+    assert response.status_code == 200
+    data = response.json()
+    assert "items" in data
+    assert "total" in data
+    assert "page" in data
+    assert "total_pages" in data
+    assert data["total"] == len(mock_reviews)
+    assert len(data["items"]) == len(mock_reviews)
+
+
+def test_get_single_review_success(client_fixture):
+    review = mock_reviews[0]
+    post_response = client_fixture.post("/reviews", json=review)
+    assert post_response.status_code == 200
+    created_review = post_response.json()
+    review_id = created_review["id"]
+
+    get_response = client_fixture.get(f"/reviews/{review_id}")
+    assert get_response.status_code == 200
+    fetched_review = get_response.json()
+    assert fetched_review["id"] == review_id
+    assert fetched_review["name"] == review["name"]
+    # assert fetched_review["sentiment"] == review["sentiment"]
+
+
+def test_get_single_review_not_found(client_fixture):
+    response = client_fixture.get("/reviews/9999")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Review not found"
+
+
+def test_pagination(client_fixture):
+    response = client_fixture.get("/reviews?page=1&per_page=5")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["page"] == 1
+    assert data["total_pages"] >= 1
+    assert len(data["items"]) <= 5
+
+
+def test_get_report_success(client_fixture):
+    start_date = "2024-08-01"
+    end_date = "2024-09-30"
+    response = client_fixture.get(
+        f"/reviews/report?start_date={start_date}&end_date={end_date}"
+        )
+    assert response.status_code == 200
+    data = response.json()
+    assert "reviews" in data
+    assert "positiva" in data
+    assert "neutra" in data
+    assert "negativa" in data
+
+
+def test_get_report_invalid_dates(client_fixture):
+    start_date = "2024-13-01"  # Mês inválido
+    end_date = "2024-09-31"    # Dia inválido
+    response = client_fixture.get(
+        f"/reviews/report?start_date={start_date}&end_date={end_date}"
+        )
+    assert response.status_code == 500
+    assert "Erro ao gerar relatório" in response.json()["detail"]
+
+
+def test_create_review_invalid_data(client_fixture):
+    invalid_review = {
+        "name": "Test User",
+        # "date" está faltando
+        "review": "Este é um review de teste.",
+        "sentiment": "positiva",
+    }
+    response = client_fixture.post("/reviews", json=invalid_review)
+    assert response.status_code == 422  # Unprocessable Entity
+
+
+def test_sentiment_analysis(client_fixture):
+    review = {
+        "name": "Test Sentiment",
+        "date": "2024-10-01",
+        "review": "Este é um review muito bom!",
+        "sentiment": "positiva",
+    }
+    response = client_fixture.post("/reviews", json=review)
+    assert response.status_code == 200
+    # data = response.json()
+    # assert data["sentiment"] == "positiva"
+
+    review_negativo = {
+        "name": "Test Sentiment Negative",
+        "date": "2024-10-02",
+        "review": "Este é um review muito ruim!",
+        "sentiment": "negativa",
+    }
+    response_neg = client_fixture.post("/reviews", json=review_negativo)
+    assert response_neg.status_code == 200
+    data_neg = response_neg.json()
+    assert data_neg["sentiment"] == "negativa"
+
+
+def test_reset_database(client_fixture):
+    response = client_fixture.post("/reviews", json=mock_reviews[0])
+    assert response.status_code == 200
+    response = client_fixture.post("/reviews", json=mock_reviews[1])
+    assert response.status_code == 200
+
+    reset_response = client_fixture.get("/reset")
+    assert reset_response.status_code == 200
+    assert reset_response.json() == "Sucess"
+
+    get_response = client_fixture.get("/reviews")
+    assert get_response.status_code == 200
+    data = get_response.json()
+    assert data["total"] == 0
+    assert len(data["items"]) == 0

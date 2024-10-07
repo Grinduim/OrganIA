@@ -100,7 +100,7 @@ def get_report(start_date: str, end_date: str, db: Session = Depends(get_db)) ->
     As avaliações são classificadas em positiva, neutra ou negativa, e o relatório inclui a contagem de cada uma dessas categorias.
 
     Args:
-        start_date (str): A data inicial do intervalo no formato 'YYYY-MM-DD'.
+        start_date (str): A data inicial do intervalo no formato 'YYYY-MM-DD'. |
         end_date (str): A data final do intervalo no formato 'YYYY-MM-DD'.
 
     Returns:

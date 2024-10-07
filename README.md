@@ -1,5 +1,3 @@
-# Aplicação de Avaliações com FastAPI
-
 ## Visão Geral
 
 Esta aplicação permite a criação, consulta e geração de relatórios de avaliações de clientes. Utilizando FastAPI, SQLAlchemy e análise de sentimento, a API fornece endpoints para gerenciar avaliações, incluindo funcionalidades de criação, listagem com paginação, obtenção de avaliações específicas e geração de relatórios baseados em intervalos de datas.

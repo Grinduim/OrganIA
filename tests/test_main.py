@@ -79,3 +79,8 @@ def test_create_review():
         #Poderia ser implementado a validação da classificação, mas o modelo não está 100%
         # assert response.json()["sentiment"] == review["sentiment"]
 
+
+def test_get_all_reviews():
+    response = client.get("/reviews")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)

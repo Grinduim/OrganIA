@@ -1,23 +1,25 @@
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.models import Review
-from app.schemas import ReviewCreate, ReviewResponse
+from app.schemas import ReviewReport, ReviewResponse, ReviewCreate
 from app.db import SessionLocal
 from app.sentiment_analyze import analyze_sentiment_pt, analyze_sentiment
-app = FastAPI()
+import datetime
+from sqlalchemy.exc import SQLAlchemyError
+import logging
 
-# Dependência de banco de dados
+app = FastAPI()
+logger = logging.getLogger(__name__)
+
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-        
-
 
 @app.post("/reviews", response_model=ReviewResponse)
-def create_review(review: ReviewCreate, db: Session = Depends(get_db)):
+def create_review(review: ReviewCreate, db: Session = Depends(get_db)) -> ReviewResponse:
     """
     Cria uma nova avaliação.
 
@@ -26,31 +28,26 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db)):
 
     Args:
         review (`ReviewCreate`): Os dados da nova avaliação a serem criados.
-        
+
     Returns:
-        ReviewResponse: Os dados da avaliação criada, incluindo seu ID e o sentimento analisado.
-        
-            - id (int): O ID da avaliação gerada.
-            
-            - name (str): Nome da pessoa que fez a avaliação.
-            
-            - date (str): Data em que a avaliação foi feita (formato 'YYYY-MM-DD').
-            
-            - review (str): Texto da avaliação.
-            
-            - sentiment (str): O sentimento da avaliação ('positiva', 'negativa', 'neutra').
+        `ReviewResponse`: Os dados da avaliação criada, incluindo seu ID e o sentimento analisado.
 
     Raises:
         SQLAlchemyError: Erros relacionados ao banco de dados podem ser levantados se a operação falhar.
     """
-    new_review = Review(name=review.name, date=review.date, review=review.review, sentiment=analyze_sentiment(review.review)[0])
-    db.add(new_review)
-    db.commit()
-    db.refresh(new_review)
-    return new_review
+    try:
+        new_review = Review(name=review.name, date=review.date, review=review.review, sentiment=analyze_sentiment(review.review)[0])
+        db.add(new_review)
+        db.commit()
+        db.refresh(new_review)
+        return new_review
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Erro ao criar avaliação: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar avaliação")
 
 @app.get("/reviews", response_model=list[ReviewResponse])
-def get_reviews(db: Session = Depends(get_db)):
+def get_reviews(db: Session = Depends(get_db)) -> list[ReviewResponse]:
     """
     Retorna todas as avaliações analisadas.
 
@@ -58,10 +55,10 @@ def get_reviews(db: Session = Depends(get_db)):
 
     Returns:
         List[`ReviewResponse`]: Uma lista de objetos `ReviewResponse` contendo as avaliações dos clientes e suas classificações de sentimento.
-    
+
     Example:
         Um exemplo de requisição bem-sucedida para esse endpoint via cURL:
-        
+
         ```bash
         curl -X 'GET' \
         'http://127.0.0.1:8000/reviews' \
@@ -94,18 +91,79 @@ def get_reviews(db: Session = Depends(get_db)):
     reviews = db.query(Review).all()
     return reviews
 
+@app.get("/reviews/report", response_model=ReviewReport)
+def get_report(start_date: str, end_date: str, db: Session = Depends(get_db)) -> ReviewReport:
+    """
+    Gera um relatório das avaliações realizadas entre as datas especificadas.
+
+    Este endpoint retorna um relatório com todas as avaliações realizadas em um intervalo de tempo. 
+    As avaliações são classificadas em positiva, neutra ou negativa, e o relatório inclui a contagem de cada uma dessas categorias.
+
+    Args:
+        start_date (str): A data inicial do intervalo no formato 'YYYY-MM-DD'.
+        end_date (str): A data final do intervalo no formato 'YYYY-MM-DD'.
+
+    Returns:
+        `ReviewReport`: Um objeto contendo a lista de avaliações e a contagem de sentimentos (positiva, neutra, negativa).
+
+    Raises:
+        HTTPException: Se ocorrer algum erro ao gerar o relatório, uma exceção HTTP 500 será lançada com a mensagem de erro correspondente.
+
+    Example:
+        Um exemplo de requisição para o endpoint `/reviews/report`:
+
+        ```bash
+        curl -X 'GET' \
+          'http://127.0.0.1:8000/reviews/report?start_date=2024-09-01&end_date=2024-09-30' \
+          -H 'accept: application/json'
+        ```
+
+        Resposta esperada:
+        ```json
+        {
+          "reviews": [
+            {
+              "id": 1,
+              "name": "Ana Silva",
+              "date": "2024-08-07",
+              "review": "O atendimento foi rápido e eficiente...",
+              "sentiment": "neutra"
+            }
+          ],
+          "positiva": 0,
+          "neutra": 1,
+          "negativa": 0
+        }
+        ```
+    """
+    logger.info(f"Generating report for period: {start_date} to {end_date}")
+    try:
+        start = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+        end = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+        reviews = db.query(Review).filter(Review.date.between(start, end)).all()
+        review_items = [ReviewResponse.from_orm(review) for review in reviews]
+        return {
+            "reviews": review_items,
+            "positiva": len([r for r in review_items if r.sentiment == "positiva"]),
+            "neutra": len([r for r in review_items if r.sentiment == "neutra"]),
+            "negativa": len([r for r in review_items if r.sentiment == "negativa"]),
+        }
+    except Exception as e:
+        logger.error(f"Erro ao gerar relatório: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar relatório: {e}")
+
 @app.get("/reviews/{id}", response_model=ReviewResponse)
-def get_review(id: int, db: Session = Depends(get_db)):
-    """Obtém uma avaliação pelo ID.
+def get_review(id: int, db: Session = Depends(get_db)) -> ReviewResponse:
+    """
+    Obtém uma avaliação pelo ID.
 
     Este endpoint recupera uma avaliação específica do banco de dados, usando o ID fornecido.
 
     Args:
-    
         id (int): O ID da avaliação requisitada.
 
     Returns:
-        ReviewResponse: Os dados da avaliação.
+        `ReviewResponse`: Os dados da avaliação.
 
     Raises:
         HTTPException: Exceção com código de status 404 se a avaliação não for encontrada.

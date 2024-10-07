@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import date
-
+from typing import List
 # Modelo para criar uma nova avaliação (input)
 class ReviewCreate(BaseModel):
     """Modelo de dados para a criação de uma nova avaliação.
@@ -30,3 +30,20 @@ class ReviewResponse(BaseModel):
     date: date
     review: str
     sentiment: str
+    
+    class Config:
+        from_attributes=True
+        
+class ReviewReport(BaseModel):
+    """Modelo de dados para o relatório de avaliações, incluindo contagem de sentimentos.
+
+    Attributes:
+        reviews (List[ReviewResponse]): Uma lista de avaliações realizadas no período especificado.
+        positiva (int): Contagem de avaliações com sentimento positivo.
+        neutra (int): Contagem de avaliações com sentimento neutro.
+        negativa (int): Contagem de avaliações com sentimento negativo.
+    """
+    reviews: List[ReviewResponse]
+    positiva: int
+    neutra: int
+    negativa: int

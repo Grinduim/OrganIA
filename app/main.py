@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException, Depends
+import datetime
+from fastapi import FastAPI, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from app.models import Review
 from app.schemas import ReviewReport, ReviewResponse, ReviewCreate
+from sqlalchemy_pagination import paginate
 from app.db import SessionLocal
 from app.sentiment_analyze import analyze_sentiment
-import datetime
 from sqlalchemy.exc import SQLAlchemyError
 import logging
 
@@ -53,54 +54,125 @@ def create_review(review: ReviewCreate,
         raise HTTPException(status_code=500, detail="Erro ao criar avaliação")
 
 
-@app.get("/reviews", response_model=list[ReviewResponse])
-def get_reviews(db: Session = Depends(get_db)) -> list[ReviewResponse]:
+# @app.get("/reviews", response_model=list[ReviewResponse])
+# def get_reviews(db: Session = Depends(get_db)) -> list[ReviewResponse]:
+#     """
+#     Retorna todas as avaliações analisadas.
+
+#     Este endpoint recupera todas as avaliações de clientes armazenadas no banco de
+#     dados e retorna uma lista com as avaliações e suas respectivas classificações de
+#     sentimento (positiva, negativa, neutra).
+
+#     Returns:
+#         List[`ReviewResponse`]: Uma lista de objetos `ReviewResponse` contendo as
+#         avaliações dos clientes e suas classificações de sentimento.
+
+#     Example:
+#         Um exemplo de requisição bem-sucedida para esse endpoint via cURL:
+
+#         ```bash
+#         curl -X "GET" \
+#         "http://127.0.0.1:8000/reviews" \
+#         -H "accept: application/json"
+#         ```
+
+#         Resposta esperada (exemplo):
+#         ```json
+#         [
+#             {
+#                 "id": 1,
+#                 "name": "Ana Silva",
+#                 "date": "2024-08-07",
+#                 "review": "O atendimento foi rápido e eficiente...",
+#                 "sentiment": "neutra"
+#             },
+#             {
+#                 "id": 2,
+#                 "name": "Bruno Souza",
+#                 "date": "2024-09-21",
+#                 "review": "Estou extremamente satisfeito com o suporte!",
+#                 "sentiment": "positiva"
+#             }
+#         ]
+#         ```
+
+#     Raises:
+#         HTTPException: Não há exceções esperadas diretamente desse endpoint, pois ele
+#         retorna uma lista vazia caso não haja dados no banco de dados.
+#     """
+#     reviews = db.query(Review).all()
+#     return reviews
+
+
+@app.get("/reviews", response_model=dict)
+def get_reviews(page: int = Query(1, ge=1), per_page: int = Query(10, ge=1),
+                db: Session = Depends(get_db)) -> dict:
     """
-    Retorna todas as avaliações analisadas.
+    Retorna todas as avaliações analisadas com paginação.
 
     Este endpoint recupera todas as avaliações de clientes armazenadas no banco de
-    dados e retorna uma lista com as avaliações e suas respectivas classificações de
-    sentimento (positiva, negativa, neutra).
+    dados e retorna uma lista paginada com as avaliações e suas respectivas
+    classificações de sentimento (positiva, negativa, neutra).
+
+    Args:
+        page (int): Número da página a ser recuperada.
+        per_page (int): Número de avaliações por página.
+        db (Session): Instância de sessão do banco de dados injetada.
 
     Returns:
-        List[`ReviewResponse`]: Uma lista de objetos `ReviewResponse` contendo as
-        avaliações dos clientes e suas classificações de sentimento.
+        dict: Um dicionário contendo os seguintes campos:
+            - items (list): Lista de objetos `ReviewResponse` com as avaliações.
+            - total (int): Número total de avaliações.
+            - page (int): Número da página atual.
+            - total_pages (int): Número total de páginas.
 
     Example:
         Um exemplo de requisição bem-sucedida para esse endpoint via cURL:
 
         ```bash
         curl -X "GET" \
-        "http://127.0.0.1:8000/reviews" \
+        "http://127.0.0.1:8000/reviews?page=1&per_page=10" \
         -H "accept: application/json"
         ```
 
         Resposta esperada (exemplo):
+
         ```json
-        [
-            {
-                "id": 1,
-                "name": "Ana Silva",
-                "date": "2024-08-07",
-                "review": "O atendimento foi rápido e eficiente...",
-                "sentiment": "neutra"
-            },
-            {
-                "id": 2,
-                "name": "Bruno Souza",
-                "date": "2024-09-21",
-                "review": "Estou extremamente satisfeito com o suporte!",
-                "sentiment": "positiva"
-            }
-        ]
+        {
+            "items": [
+                {
+                    "id": 1,
+                    "name": "Ana Silva",
+                    "date": "2024-08-07",
+                    "review": "O atendimento foi rápido e eficiente...",
+                    "sentiment": "neutra"
+                },
+                {
+                    "id": 2,
+                    "name": "Bruno Souza",
+                    "date": "2024-09-21",
+                    "review": "Estou extremamente satisfeito com o suporte!",
+                    "sentiment": "positiva"
+                }
+            ],
+            "total": 2,
+            "page": 1,
+            "total_pages": 1
+        }
         ```
 
     Raises:
-        HTTPException: Não há exceções esperadas diretamente desse endpoint, pois ele
-        retorna uma lista vazia caso não haja dados no banco de dados.
+        HTTPException: Em caso de falha inesperada na query do banco de dados.
     """
-    reviews = db.query(Review).all()
-    return reviews
+    reviews_query = db.query(Review)
+    paginated_reviews = paginate(reviews_query, page, per_page)
+    return {
+        "items": [ReviewResponse.from_orm(review)
+                  for review in paginated_reviews.items],
+        "total": paginated_reviews.total,
+        "page": page,
+        "total_pages": paginated_reviews.pages
+    }
 
 
 @app.get("/reviews/report", response_model=ReviewReport)
@@ -193,3 +265,4 @@ def get_review(id: int, db: Session = Depends(get_db)) -> ReviewResponse:
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     return review
+

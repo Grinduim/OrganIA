@@ -76,10 +76,11 @@ def test_create_review():
         print(review["name"])
         assert response.status_code == 200
         assert response.json()["name"] == review["name"]
-        #Poderia ser implementado a validação da classificação, mas o modelo não está 100%
+        #TODO : implement a validation about the review sentiment gotcha
         # assert response.json()["sentiment"] == review["sentiment"]
 
 
+# Test getting all reviews (GET /reviews)
 def test_get_all_reviews():
     response = client.get("/reviews")
     assert response.status_code == 200

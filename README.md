@@ -9,7 +9,6 @@ Esta aplicação permite a criação, consulta e geração de relatórios de ava
 - [Executando a Aplicação](#executando-a-aplicação)
 - [Acessando a API e Documentação](#acessando-a-api-e-documentação)
 - [Rodando os Testes](#rodando-os-testes)
-- [Endpoints Disponíveis](#endpoints-disponíveis)
 
 ## Configuração e Instalação
 

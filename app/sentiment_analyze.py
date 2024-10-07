@@ -4,7 +4,8 @@ from textblob import TextBlob
 
 # Load the sentiment-analysis pipeline
 sentiment_analysis = pipeline("sentiment-analysis",
-                              model="neuralmind/bert-base-portuguese-cased")
+                              model="nlptown/bert-base-multilingual-uncased-sentiment")
+
 
 en_to_pt = {
     "NEUTRAL": "neutra",
@@ -14,13 +15,13 @@ en_to_pt = {
 def analyze_sentiment(text):
     results = sentiment_analysis(text)
     sentiment = results[0]
-    return sentiment['label'], sentiment['score']
+    return classify_sentiment(int(sentiment['label'][0])), sentiment['score']
 
 
-def classify_sentiment(polarity):
-    if polarity > 0.1:
+def classify_sentiment(star):
+    if star >= 3:
         return "positiva"
-    elif polarity <= -0.1:
+    elif star <= 2:
         return "negativa"
     else:
         return "neutra"

@@ -3,13 +3,14 @@ from sqlalchemy.orm import Session
 from app.models import Review
 from app.schemas import ReviewReport, ReviewResponse, ReviewCreate
 from app.db import SessionLocal
-from app.sentiment_analyze import analyze_sentiment_pt, analyze_sentiment
+from app.sentiment_analyze import analyze_sentiment
 import datetime
 from sqlalchemy.exc import SQLAlchemyError
 import logging
 
 app = FastAPI()
 logger = logging.getLogger(__name__)
+
 
 def get_db():
     db = SessionLocal()
@@ -18,8 +19,10 @@ def get_db():
     finally:
         db.close()
 
+
 @app.post("/reviews", response_model=ReviewResponse)
-def create_review(review: ReviewCreate, db: Session = Depends(get_db)) -> ReviewResponse:
+def create_review(review: ReviewCreate,
+                  db: Session = Depends(get_db)) -> ReviewResponse:
     """
     Cria uma nova avaliação.
 
@@ -30,13 +33,16 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db)) -> Review
         review (`ReviewCreate`): Os dados da nova avaliação a serem criados.
 
     Returns:
-        `ReviewResponse`: Os dados da avaliação criada, incluindo seu ID e o sentimento analisado.
+        `ReviewResponse`: Os dados da avaliação criada, incluindo seu ID e o
+         sentimento analisado.
 
     Raises:
-        SQLAlchemyError: Erros relacionados ao banco de dados podem ser levantados se a operação falhar.
+        SQLAlchemyError: Erros relacionados ao banco de dados podem ser levantados se a
+        operação falhar.
     """
     try:
-        new_review = Review(name=review.name, date=review.date, review=review.review, sentiment=analyze_sentiment(review.review)[0])
+        new_review = Review(name=review.name, date=review.date, review=review.review,
+                            sentiment=analyze_sentiment(review.review)[0])
         db.add(new_review)
         db.commit()
         db.refresh(new_review)
@@ -46,23 +52,27 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db)) -> Review
         logger.error(f"Erro ao criar avaliação: {e}")
         raise HTTPException(status_code=500, detail="Erro ao criar avaliação")
 
+
 @app.get("/reviews", response_model=list[ReviewResponse])
 def get_reviews(db: Session = Depends(get_db)) -> list[ReviewResponse]:
     """
     Retorna todas as avaliações analisadas.
 
-    Este endpoint recupera todas as avaliações de clientes armazenadas no banco de dados e retorna uma lista com as avaliações e suas respectivas classificações de sentimento (positiva, negativa, neutra).
+    Este endpoint recupera todas as avaliações de clientes armazenadas no banco de
+    dados e retorna uma lista com as avaliações e suas respectivas classificações de
+    sentimento (positiva, negativa, neutra).
 
     Returns:
-        List[`ReviewResponse`]: Uma lista de objetos `ReviewResponse` contendo as avaliações dos clientes e suas classificações de sentimento.
+        List[`ReviewResponse`]: Uma lista de objetos `ReviewResponse` contendo as
+        avaliações dos clientes e suas classificações de sentimento.
 
     Example:
         Um exemplo de requisição bem-sucedida para esse endpoint via cURL:
 
         ```bash
-        curl -X 'GET' \
-        'http://127.0.0.1:8000/reviews' \
-        -H 'accept: application/json'
+        curl -X "GET" \
+        "http://127.0.0.1:8000/reviews" \
+        -H "accept: application/json"
         ```
 
         Resposta esperada (exemplo):
@@ -86,36 +96,44 @@ def get_reviews(db: Session = Depends(get_db)) -> list[ReviewResponse]:
         ```
 
     Raises:
-        HTTPException: Não há exceções esperadas diretamente desse endpoint, pois ele retorna uma lista vazia caso não haja dados no banco de dados.
+        HTTPException: Não há exceções esperadas diretamente desse endpoint, pois ele
+        retorna uma lista vazia caso não haja dados no banco de dados.
     """
     reviews = db.query(Review).all()
     return reviews
 
+
 @app.get("/reviews/report", response_model=ReviewReport)
-def get_report(start_date: str, end_date: str, db: Session = Depends(get_db)) -> ReviewReport:
+def get_report(start_date: str, end_date: str,
+               db: Session = Depends(get_db)) -> ReviewReport:
     """
     Gera um relatório das avaliações realizadas entre as datas especificadas.
 
-    Este endpoint retorna um relatório com todas as avaliações realizadas em um intervalo de tempo. 
-    As avaliações são classificadas em positiva, neutra ou negativa, e o relatório inclui a contagem de cada uma dessas categorias.
+    Este endpoint retorna um relatório com todas as avaliações realizadas em
+    um intervalo de tempo.
+    As avaliações são classificadas em positiva, neutra ou negativa, e o relatório
+    inclui a contagem de cada uma dessas categorias.
 
     Args:
         start_date (str): A data inicial do intervalo no formato 'YYYY-MM-DD'. |
         end_date (str): A data final do intervalo no formato 'YYYY-MM-DD'.
 
     Returns:
-        `ReviewReport`: Um objeto contendo a lista de avaliações e a contagem de sentimentos (positiva, neutra, negativa).
+        `ReviewReport`: Um objeto contendo a lista de avaliações e a contagem de
+        sentimentos (positiva, neutra, negativa).
 
     Raises:
-        HTTPException: Se ocorrer algum erro ao gerar o relatório, uma exceção HTTP 500 será lançada com a mensagem de erro correspondente.
+        HTTPException: Se ocorrer algum erro ao gerar o relatório, uma exceção HTTP 500
+        será lançada com a mensagem de erro correspondente.
 
     Example:
         Um exemplo de requisição para o endpoint `/reviews/report`:
 
         ```bash
-        curl -X 'GET' \
-          'http://127.0.0.1:8000/reviews/report?start_date=2024-09-01&end_date=2024-09-30' \
-          -H 'accept: application/json'
+        curl -X "GET" \
+          "http://127.0.0.1:8000/reviews/
+          report?start_date=2024-09-01&end_date=2024-09-30" \
+          -H "accept: application/json"
         ```
 
         Resposta esperada:
@@ -152,12 +170,14 @@ def get_report(start_date: str, end_date: str, db: Session = Depends(get_db)) ->
         logger.error(f"Erro ao gerar relatório: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao gerar relatório: {e}")
 
+
 @app.get("/reviews/{id}", response_model=ReviewResponse)
 def get_review(id: int, db: Session = Depends(get_db)) -> ReviewResponse:
     """
     Obtém uma avaliação pelo ID.
 
-    Este endpoint recupera uma avaliação específica do banco de dados, usando o ID fornecido.
+    Este endpoint recupera uma avaliação específica do banco de dados,
+    usando o ID fornecido.
 
     Args:
         id (int): O ID da avaliação requisitada.
@@ -166,10 +186,10 @@ def get_review(id: int, db: Session = Depends(get_db)) -> ReviewResponse:
         `ReviewResponse`: Os dados da avaliação.
 
     Raises:
-        HTTPException: Exceção com código de status 404 se a avaliação não for encontrada.
+        HTTPException: Exceção com código de status 404 se
+        a avaliação não for encontrada.
     """
     review = db.query(Review).get(id)
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     return review
-

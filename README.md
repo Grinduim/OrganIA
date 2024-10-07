@@ -67,10 +67,20 @@ A FastAPI fornece automaticamente uma documentação interativa para a API utili
 
 Swagger UI: http://127.0.0.1:8000/docs – Uma interface interativa para testar os endpoints da API.
 
-## Rodando os Testes
-Os testes foram implementados utilizando pytest. Para garantir que a aplicação funcione corretamente, é importante rodar os testes. Siga os passos abaixo para executar os testes:
+**Importante** : O modelo utilizado atualmente é nlptown/bert-base-multilingual-uncased-sentiment, porem você pode alterar para um de sua preferencia e realizar as adaptações necessarias.
+Além disso, a string de conexão com o Postgre está hard coded, sendo usuario postgres e senha root, caso você queira alterar alguma informação sobre, você pode alterar em app/db.py
 
-Importante: Antes de iniciarmos o teste, gostaria de ressaltar que não está sendo validado no momento a questão dos resultados da analise de sentimento, pois o modelo utilizado não está 100% coerente com os dados disponibilizados, porem isso pode ser realizado facilmente apenas removendo os comentários no arquivo test_main.py
+
+## Rodando os Testes
+
+Os testes foram implementados utilizando pytest. Para garantir que a aplicação funcione corretamente, é importante rodar os testes. Siga os passos abaixo:
+
+**Importante**: Antes de iniciar os testes, é necessário ressaltar que a validação dos resultados da análise de sentimento não está sendo realizada no momento, pois o modelo utilizado pode não estar 100% coerente com os dados disponíveis. No entanto, isso pode ser facilmente corrigido ao remover os comentários no arquivo `test_main.py`.
+
+1. Certifique-se de que o ambiente virtual está ativado:
+   ```bash
+   venv\Scripts\activate  # No Windows
+
 1º Certifique-se de que o ambiente virtual está ativado:
 
 ```bash

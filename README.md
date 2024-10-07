@@ -50,11 +50,11 @@ Esta aplicação permite a criação, consulta e geração de relatórios de ava
 
 Para iniciar a aplicação FastAPI, execute:
 
-1º Certifique-se de que o ambiente virtual está ativado:
+1. Certifique-se de que o ambiente virtual está ativado:
 ```bash
     venv\Scripts\activate
 ```
-2º Execute a aplicação
+2. Execute a aplicação
 ```bash
 
     uvicorn app.main:app --reload
@@ -81,14 +81,9 @@ Os testes foram implementados utilizando pytest. Para garantir que a aplicação
 1. Certifique-se de que o ambiente virtual está ativado:
    ```bash
    venv\Scripts\activate  # No Windows
+    ```
 
-1º Certifique-se de que o ambiente virtual está ativado:
-
-```bash
-    venv\Scripts\activate
-```
-
-2º Execute os testes com o comando:
+2. Execute os testes com o comando:
 ```bash
     pytest ./test
 ```

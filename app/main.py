@@ -18,22 +18,15 @@ def get_db():
 
 @app.post("/reviews", response_model=ReviewResponse)
 def create_review(review: ReviewCreate, db: Session = Depends(get_db)):
-    """Cria uma nova avaliação.
+    """
+    Cria uma nova avaliação.
 
     Este endpoint recebe os dados de uma nova avaliação e os armazena no banco de dados,
     incluindo a análise de sentimento do texto da avaliação.
 
     Args:
-        review (ReviewCreate): Os dados da nova avaliação a serem criados.
+        review (`ReviewCreate`): Os dados da nova avaliação a serem criados.
         
-            - name (str): Nome da pessoa que fez a avaliação.
-            
-            - date (str): Data em que a avaliação foi feita (formato 'YYYY-MM-DD').
-            
-            - review (str): Texto da avaliação.
-        
-        # db (Session, optional): A sessão do banco de dados. O padrão é obter uma nova sessão.
-
     Returns:
         ReviewResponse: Os dados da avaliação criada, incluindo seu ID e o sentimento analisado.
         
@@ -64,7 +57,7 @@ def get_reviews(db: Session = Depends(get_db)):
     Este endpoint recupera todas as avaliações de clientes armazenadas no banco de dados e retorna uma lista com as avaliações e suas respectivas classificações de sentimento (positiva, negativa, neutra).
 
     Returns:
-        List[ReviewResponse]: Uma lista de objetos `ReviewResponse` contendo as avaliações dos clientes e suas classificações de sentimento.
+        List[`ReviewResponse`]: Uma lista de objetos `ReviewResponse` contendo as avaliações dos clientes e suas classificações de sentimento.
     
     Example:
         Um exemplo de requisição bem-sucedida para esse endpoint via cURL:
@@ -101,4 +94,24 @@ def get_reviews(db: Session = Depends(get_db)):
     reviews = db.query(Review).all()
     return reviews
 
+@app.get("/reviews/{id}", response_model=ReviewResponse)
+def get_review(id: int, db: Session = Depends(get_db)):
+    """Obtém uma avaliação pelo ID.
+
+    Este endpoint recupera uma avaliação específica do banco de dados, usando o ID fornecido.
+
+    Args:
+    
+        id (int): O ID da avaliação requisitada.
+
+    Returns:
+        ReviewResponse: Os dados da avaliação.
+
+    Raises:
+        HTTPException: Exceção com código de status 404 se a avaliação não for encontrada.
+    """
+    review = db.query(Review).get(id)
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    return review
 

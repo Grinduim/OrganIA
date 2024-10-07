@@ -1,6 +1,6 @@
 from transformers import pipeline
 from textblob import TextBlob
-from googletrans import Translator
+# from googletrans import Translator
 
 # Load the sentiment-analysis pipeline
 sentiment_analysis = pipeline("sentiment-analysis", model="neuralmind/bert-base-portuguese-cased")
@@ -29,11 +29,11 @@ def classify_sentiment(polarity):
     
 def analyze_sentiment_pt(text):
     # Translate to English
-    translator = Translator()
-    translated = translator.translate(text, src='pt', dest='en').text
+    # translator = Translator()
+    # translated = translator.translate(text, src='pt', dest='en').text
     
 
-    blob = TextBlob(translated)
+    blob = TextBlob(text)
     polarity = blob.sentiment.polarity
 
     sentiment_class = classify_sentiment(polarity)
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         },
     ]
     for i in mock_reviews:
-        sentiment_class, polarity  = analyze_sentiment_pt(i["review"])
+        sentiment_class, polarity  = analyze_sentiment(i["review"])
         print(f"Sentiment: {sentiment_class}, Polarity: {polarity}")
 
         print(f"Expected: {i["sentiment"]}, but got {sentiment_class}")

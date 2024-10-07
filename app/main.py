@@ -28,7 +28,7 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db)):
         
             - name (str): Nome da pessoa que fez a avaliação.
             
-            - date (date): Data em que a avaliação foi feita (formato 'YYYY-MM-DD').
+            - date (str): Data em que a avaliação foi feita (formato 'YYYY-MM-DD').
             
             - review (str): Texto da avaliação.
         
@@ -41,7 +41,7 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db)):
             
             - name (str): Nome da pessoa que fez a avaliação.
             
-            - date (date): Data em que a avaliação foi feita (formato 'YYYY-MM-DD').
+            - date (str): Data em que a avaliação foi feita (formato 'YYYY-MM-DD').
             
             - review (str): Texto da avaliação.
             
@@ -55,4 +55,10 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_review)
     return new_review
+
+@app.get("/reviews", response_model=list[ReviewResponse])
+def get_reviews(db: Session = Depends(get_db)):
+    reviews = db.query(Review).all()
+    return reviews
+
 
